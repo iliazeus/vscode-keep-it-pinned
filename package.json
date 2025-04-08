@@ -1,4 +1,5 @@
 {
+  "publisher": "iliazeus",
   "name": "keep-it-pinned",
   "displayName": "Keep It Pinned",
   "description": "Keep a pinned editor pinned when dragging it between editor groups",
@@ -6,12 +7,36 @@
   "engines": {
     "vscode": "^1.70.0"
   },
+  "extensionKind": [
+    "ui",
+    "workspace"
+  ],
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iliazeus/vscode-keep-it-pinned.git"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
-  "contributes": {},
+  "contributes": {
+    "configuration": {
+      "title": "Keep It Pinned",
+      "type": "object",
+      "properties": {
+        "keep-it-pinned.enable": {
+          "title": "Enable",
+          "description": "Keep a pinned editor pinned when dragging it between editor groups",
+          "type": "boolean",
+          "default": true
+        }
+      }
+    }
+  },
   "scripts": {
     "vscode:prepublish": "npm run package",
     "compile": "npm run check-types && npm run lint && node esbuild.js",
@@ -34,6 +59,7 @@
     "@typescript-eslint/parser": "^8.28.0",
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.3.2",
     "esbuild": "^0.25.1",
     "eslint": "^9.23.0",
     "npm-run-all": "^4.1.5",

@@ -1,25 +1,57 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
-  // Use the console to output diagnostic information (console.log) and errors (console.error)
-  // This line of code will only be executed once when your extension is activated
-  console.log('Congratulations, your extension "keep-it-pinned" is now active!');
-
-  // The command has been defined in the package.json file
-  // Now provide the implementation of the command with registerCommand
-  // The commandId parameter must match the command field in package.json
-  const disposable = vscode.commands.registerCommand("keep-it-pinned.helloWorld", () => {
-    // The code you place here will be executed every time your command is executed
-    // Display a message box to the user
-    vscode.window.showInformationMessage("Hello World from Keep It Pinned!");
-  });
-
-  context.subscriptions.push(disposable);
+interface TabState {
+  openedAt: Date;
+  isActive: boolean;
+  isPinned: boolean;
 }
 
-// This method is called when your extension is deactivated
-export function deactivate() {}
+type TabKey = string;
+function tabKey(tab: vscode.Tab): string {
+  return JSON.stringify([tab.label, tab.input]);
+}
+
+const recentlyOpenedTabStatesByKey = new Map<TabKey, TabState>();
+
+function onDidChangeTabs(e: vscode.TabChangeEvent): void {
+  const enabled = vscode.workspace.getConfiguration().get<boolean>("keep-it-pinned.enable");
+  if (!enabled) return;
+
+  const now = new Date();
+  for (const [key, state] of recentlyOpenedTabStatesByKey) {
+    if (+state.openedAt - +now > 1000) recentlyOpenedTabStatesByKey.delete(key);
+  }
+
+  for (const closedTab of e.closed) {
+    const recentlyOpenedTabState = recentlyOpenedTabStatesByKey.get(tabKey(closedTab));
+    if (!recentlyOpenedTabState) continue;
+
+    if (recentlyOpenedTabState.isActive && closedTab.isPinned && !recentlyOpenedTabState.isPinned) {
+      vscode.commands.executeCommand("workbench.action.pinEditor");
+    }
+  }
+
+  for (const tab of e.opened) {
+    recentlyOpenedTabStatesByKey.set(tabKey(tab), {
+      openedAt: now,
+      isActive: tab.isActive,
+      isPinned: tab.isPinned,
+    });
+  }
+
+  for (const tab of e.changed) {
+    const state = recentlyOpenedTabStatesByKey.get(tabKey(tab));
+    if (!state) continue;
+
+    Object.assign(state, {
+      isActive: tab.isActive,
+      isPinned: tab.isPinned,
+    });
+  }
+}
+
+export function activate(context: vscode.ExtensionContext) {
+  context.subscriptions.push(
+    vscode.window.tabGroups.onDidChangeTabs(onDidChangeTabs), // prettier-ignore
+  );
+}
